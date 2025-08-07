@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 class Config:
     API_KEY = os.getenv("API_KEY", "")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
     CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
@@ -40,8 +39,6 @@ class Config:
         """Validate configuration"""
         if not self.GEMINI_API_KEY:
             logger.warning("GEMINI_API_KEY not set - using fallback logic")
-        if not self.PINECONE_API_KEY:
-            logger.warning("PINECONE_API_KEY not set - using FAISS fallback")
 
 config = Config()
 config.validate()
@@ -88,23 +85,25 @@ async def lifespan(app: FastAPI):
     # Startup
     global redis_client
     
-    logger.info("Starting up LLM Insurance Query System")
+    logger.info("🚀 Starting up LLM Insurance Query System")
     
     try:
-        # Initialize Redis
-        redis_client = redis.from_url(config.REDIS_URL, decode_responses=True)
-        await redis_client.ping()
-        logger.info("Redis connection established")
+        # Initialize Redis (optional)
+        try:
+            redis_client = redis.from_url(config.REDIS_URL, decode_responses=True)
+            await redis_client.ping()
+            logger.info("✅ Redis connection established")
+        except Exception as e:
+            logger.warning(f"⚠️  Redis connection failed: {e} - Continuing without cache")
+            redis_client = None
+        
+        # Initialize components in background to avoid blocking startup
+        asyncio.create_task(initialize_components_background())
+        
+        logger.info("System startup complete")
+        
     except Exception as e:
-        logger.warning(f"Redis connection failed: {e} - Continuing without cache")
-        redis_client = None
-    
-    # Initialize components
-    await document_processor.initialize()
-    await vector_store.initialize()
-    await llm_client.initialize()
-    
-    logger.info("System initialization complete")
+        logger.error(f"Startup error: {e}")
     
     yield
     
@@ -113,8 +112,30 @@ async def lifespan(app: FastAPI):
         await redis_client.close()
     logger.info("System shutdown complete")
 
+async def initialize_components_background():
+    """Initialize heavy components in background"""
+    try:
+        logger.info("Initializing components in background...")
+        
+        # Initialize document processor
+        await document_processor.initialize()
+        logger.info("Document processor ready")
+        
+        # Initialize vector store
+        await vector_store.initialize()
+        logger.info("Vector store ready")
+        
+        # Initialize LLM client
+        await llm_client.initialize()
+        logger.info("LLM client ready")
+        
+        logger.info("All components initialized successfully!")
+        
+    except Exception as e:
+        logger.error(f"Component initialization error: {e}")
+
 # Security with better error handling
-security = HTTPBearer(auto_error=False)  # Don't auto-raise errors
+security = HTTPBearer(auto_error=False)
 
 def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """Verify Bearer token with proper error handling"""
@@ -135,7 +156,7 @@ def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(s
 
 # FastAPI app with enhanced configuration and lifespan
 app = FastAPI(
-    title="LLM Insurance Query System",
+    title="HackRx LLM Insurance Query System",
     description="AI-powered system for processing natural language queries over insurance documents",
     version="1.0.0",
     docs_url="/docs",
@@ -152,35 +173,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "HackRx LLM Insurance Query System",
+        "status": "running",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "api": "/hackrx/run",
+            "docs": "/docs"
+        }
+    }
+
 @app.get("/health")
 async def health_check():
     """Enhanced health check with component status"""
-    health_status = {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "components": {
-            "document_processor": "ready",
-            "vector_store": "ready" if vector_store.embedding_model else "not_ready",
-            "llm_client": "ready" if llm_client.model else "fallback_mode",
-            "redis": "ready" if redis_client else "disabled"
-        },
-        "active_requests": len(active_requests)
-    }
-    return health_status
-
-@app.get("/metrics")
-async def get_metrics(token: str = Depends(verify_token)):
-    """System metrics endpoint"""
+    
+    # Check component readiness
+    components_ready = True
+    component_status = {}
+    
+    try:
+        component_status["document_processor"] = "ready" if hasattr(document_processor, 'embedding_model') else "initializing"
+        component_status["vector_store"] = "ready" if hasattr(vector_store, 'embedding_model') else "initializing"  
+        component_status["llm_client"] = "ready" if hasattr(llm_client, 'model') else "initializing"
+        component_status["redis"] = "ready" if redis_client else "disabled"
+        
+        components_ready = all(status != "initializing" for status in component_status.values() if status != "disabled")
+        
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        components_ready = False
+    
     return {
+        "status": "healthy" if components_ready else "initializing",
+        "timestamp": time.time(),
+        "components": component_status,
         "active_requests": len(active_requests),
-        "cache_status": "enabled" if redis_client else "disabled",
-        "vector_store_type": "pinecone" if vector_store.pinecone_index else "faiss",
-        "llm_status": "gemini" if llm_client.model else "fallback"
+        "message": "All systems ready" if components_ready else "Components still initializing..."
     }
 
-async def get_cache_key(documents: List[str], questions: List[str]) -> str:
+async def get_cache_key(documents: str, questions: List[str]) -> str:
     """Generate cache key for request"""
-    content = f"{documents[0] if documents else ''}:{sorted(questions)}"
+    content = f"{documents}:{sorted(questions)}"
     return f"hackrx:{hashlib.sha256(content.encode()).hexdigest()[:16]}"
 
 async def cache_get(key: str) -> Optional[Dict]:
@@ -224,8 +261,21 @@ async def hackrx_run(
     try:
         logger.info(f"[{request_id}] Processing document: {request.documents[:100]}... with {len(request.questions)} questions")
         
+        # Check if components are ready
+        components_ready = (
+            hasattr(document_processor, 'embedding_model') and 
+            hasattr(vector_store, 'embedding_model') and 
+            hasattr(llm_client, 'model')
+        )
+        
+        if not components_ready:
+            logger.warning(f"[{request_id}] Components not ready, using fallback responses")
+            return HackRxResponse(answers=[
+                "System is still initializing. Please try again in 30 seconds."
+            ] * len(request.questions))
+        
         # Check cache first
-        cache_key = await get_cache_key([request.documents], request.questions)
+        cache_key = await get_cache_key(request.documents, request.questions)
         cached_result = await cache_get(cache_key)
         if cached_result:
             logger.info(f"[{request_id}] Returning cached result")
@@ -236,10 +286,14 @@ async def hackrx_run(
             chunks = await document_processor.process_document(request.documents)
         except Exception as e:
             logger.error(f"[{request_id}] Failed to process document {request.documents}: {e}")
-            return HackRxResponse(answers=["Failed to process document. Please check document URL and try again."] * len(request.questions))
+            return HackRxResponse(answers=[
+                "Failed to process document. Please check document URL and try again."
+            ] * len(request.questions))
         
         if not chunks:
-            return HackRxResponse(answers=["No content found in the provided document."] * len(request.questions))
+            return HackRxResponse(answers=[
+                "No content found in the provided document."
+            ] * len(request.questions))
         
         logger.info(f"[{request_id}] Successfully processed {len(chunks)} chunks from document")
         
@@ -280,7 +334,9 @@ async def hackrx_run(
         logger.error(f"[{request_id}] Error processing request: {str(e)}")
         logger.error(f"[{request_id}] Traceback: {traceback.format_exc()}")
         
-        return HackRxResponse(answers=["System error occurred while processing your request. Please try again later."] * len(request.questions))
+        return HackRxResponse(answers=[
+            "System error occurred while processing your request. Please try again later."
+        ] * len(request.questions))
     
     finally:
         # Remove from active requests
@@ -315,47 +371,17 @@ async def process_single_question_text(question: str, request_id: str, question_
             return answer
         except asyncio.TimeoutError:
             logger.error(f"[{request_id}] LLM timeout for question: {question[:50]}")
-            return "Request timeout - please try with a simpler question or fewer documents."
+            return "Request timeout - please try with a simpler question."
         
     except Exception as e:
         logger.error(f"[{request_id}] Error processing question '{question[:50]}': {str(e)}")
         return "Unable to process this question due to technical issues. Please rephrase and try again."
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    """Custom HTTP exception handler"""
-    return {
-        "success": False,
-        "error": {
-            "code": exc.status_code,
-            "message": exc.detail
-        },
-        "timestamp": time.time()
-    }
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
-    """General exception handler"""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    logger.error(f"Traceback: {traceback.format_exc()}")
-    return {
-        "success": False,
-        "error": {
-            "code": 500,
-            "message": "Internal server error"
-        },
-        "timestamp": time.time()
-    }
-
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
-    workers = int(os.getenv("WORKERS", 1))
-    
     uvicorn.run(
         "main:app", 
         host="0.0.0.0", 
         port=port,
-        workers=workers,
-        access_log=True,
         log_level="info"
     )
