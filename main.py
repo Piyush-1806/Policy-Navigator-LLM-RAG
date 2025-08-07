@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 
 # Configuration with validation
 class Config:
-    API_KEY = os.getenv("API_KEY", "")
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    API_KEY = os.getenv("API_KEY", "538dff30fdfe2abae239378a8a7bf5848b0825874278d1e84b43420155f4e987")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyDNU5SXXsd7sGrp_AbivHqntP0c7p9oxCQ")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
     CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
@@ -377,11 +377,20 @@ async def process_single_question_text(question: str, request_id: str, question_
         logger.error(f"[{request_id}] Error processing question '{question[:50]}': {str(e)}")
         return "Unable to process this question due to technical issues. Please rephrase and try again."
 
+# CRITICAL FIX: Ensure port binding for Render
 if __name__ == "__main__":
+    # Get port from environment (Render sets this automatically)
     port = int(os.getenv("PORT", 8000))
+    
+    # IMPORTANT: Log the port being used
+    logger.info(f"Starting server on 0.0.0.0:{port}")
+    
+    # Run with proper host binding for Render
     uvicorn.run(
         "main:app", 
-        host="0.0.0.0", 
+        host="0.0.0.0",  # Must bind to 0.0.0.0 for Render
         port=port,
-        log_level="info"
+        log_level="info",
+        access_log=True,  # Enable access logs
+        loop="asyncio"  # Explicit event loop
     )
