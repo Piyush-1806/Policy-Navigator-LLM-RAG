@@ -14,13 +14,12 @@ class VectorStore:
     def __init__(self, config):
         self.config = config
         self.embedding_model = None
-        self.pinecone_index = None
         self.faiss_index = None
         self.chunk_metadata = {}
         self.embedding_dimension = None
         
     async def initialize(self):
-        """Initialize vector store - prioritize FAISS to avoid dimension issues"""
+        """Initialize vector store with FAISS only"""
         # Load embedding model - use better model for legal/insurance text
         try:
             # Try the better model first
@@ -38,40 +37,12 @@ class VectorStore:
             logger.error(f"❌ Failed to load embedding model: {e}")
             raise
         
-        # For now, let's skip Pinecone due to dimension mismatch and use FAISS
-        # This ensures the system works reliably
-        logger.info("🔄 Using FAISS vector store to avoid dimension mismatch issues")
+        # Initialize FAISS vector store
         self.faiss_index = faiss.IndexFlatIP(self.embedding_dimension)
         logger.info(f"✅ FAISS initialized with dimension {self.embedding_dimension}")
-        
-        # Optional: Try Pinecone but don't fail if it doesn't work
-        if self.config.PINECONE_API_KEY:
-            try:
-                from pinecone import Pinecone
-                pc = Pinecone(api_key=self.config.PINECONE_API_KEY)
-                
-                index_name = "hackrx-insurance"
-                existing_indexes = pc.list_indexes()
-                index_names = [index.name for index in existing_indexes.indexes]
-                
-                if index_name in index_names:
-                    # Check if dimensions match
-                    for idx in existing_indexes.indexes:
-                        if idx.name == index_name:
-                            if idx.dimension == self.embedding_dimension:
-                                self.pinecone_index = pc.Index(index_name)
-                                logger.info("✅ Pinecone connected (dimensions match)")
-                            else:
-                                logger.warning(f"⚠️  Pinecone dimension mismatch: {idx.dimension} vs {self.embedding_dimension}")
-                                logger.info("🔄 Will use FAISS instead")
-                            break
-                else:
-                    logger.info("ℹ️  Pinecone index not found, using FAISS")
-            except Exception as e:
-                logger.info(f"ℹ️  Pinecone not available: {e}, using FAISS")
     
     async def store_chunks(self, chunks: List[Dict[str, Any]]):
-        """Store chunks in vector database"""
+        """Store chunks in FAISS vector database"""
         if not chunks:
             return
         
@@ -83,37 +54,7 @@ class VectorStore:
             embeddings = self.embedding_model.encode(texts)
             logger.info(f"Generated embeddings shape: {embeddings.shape}")
             
-            # Try Pinecone first if available
-            if self.pinecone_index:
-                try:
-                    vectors = []
-                    for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                        vector_id = hashlib.md5(f"{chunk['text'][:50]}_{i}".encode()).hexdigest()
-                        vectors.append({
-                            'id': vector_id,
-                            'values': embedding.tolist(),
-                            'metadata': {
-                                'text': chunk['text'][:1000],
-                                'page': chunk['page'],
-                                'source_url': chunk['source_url'][:200],
-                                'chunk_id': chunk['chunk_id']
-                            }
-                        })
-                    
-                    # Upload in small batches
-                    batch_size = 25
-                    for i in range(0, len(vectors), batch_size):
-                        batch = vectors[i:i + batch_size]
-                        self.pinecone_index.upsert(vectors=batch)
-                    
-                    logger.info(f"✅ Stored {len(vectors)} vectors in Pinecone")
-                    return  # Success, exit early
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️  Pinecone storage failed: {e}")
-                    logger.info("🔄 Falling back to FAISS")
-            
-            # Store in FAISS (primary or fallback)
+            # Store in FAISS
             self.faiss_index.add(embeddings.astype('float32'))
             
             # Store metadata
@@ -163,43 +104,14 @@ class VectorStore:
             
             all_results = []
             
-            # Search with multiple query variations
+            # Search with multiple query variations using FAISS
             for q in enhanced_queries:
                 if not q.strip():
                     continue
                     
                 query_embedding = self.embedding_model.encode([q])
                 
-                # Try Pinecone first if available
-                if self.pinecone_index:
-                    try:
-                        results = self.pinecone_index.query(
-                            vector=query_embedding[0].tolist(),
-                            top_k=top_k,
-                            include_metadata=True
-                        )
-                        
-                        for match in results.get('matches', []):
-                            if 'metadata' in match:
-                                chunk = {
-                                    'text': match['metadata'].get('text', ''),
-                                    'page': match['metadata'].get('page', 1),
-                                    'source_url': match['metadata'].get('source_url', ''),
-                                    'chunk_id': match['metadata'].get('chunk_id', ''),
-                                    'score': match.get('score', 0.0),
-                                    'query_variant': q
-                                }
-                                all_results.append(chunk)
-                        
-                        logger.info(f"✅ Pinecone search for '{q}' returned {len(results.get('matches', []))} chunks")
-                        # Use first successful Pinecone result
-                        break
-                        
-                    except Exception as e:
-                        logger.warning(f"⚠️  Pinecone search failed: {e}")
-                        continue
-                
-                # Search FAISS (primary or fallback)
+                # Search FAISS
                 if self.faiss_index and self.faiss_index.ntotal > 0:
                     scores, indices = self.faiss_index.search(
                         query_embedding.astype('float32'), 
@@ -214,7 +126,6 @@ class VectorStore:
                             all_results.append(chunk)
                     
                     logger.info(f"✅ FAISS search for '{q}' returned {len(scores[0])} chunks")
-                    # Don't break for FAISS - collect all variants
             
             # Remove duplicates and rank with special boost for definition chunks
             seen_texts = set()
