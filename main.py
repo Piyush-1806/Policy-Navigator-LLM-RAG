@@ -1,4 +1,6 @@
 import os
+os.environ['TRANSFORMERS_CACHE'] = '/tmp/transformers_cache'
+os.environ['TORCH_HOME'] = '/tmp/torch_home'
 import asyncio
 import hashlib
 import json
