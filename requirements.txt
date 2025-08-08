@@ -2,31 +2,25 @@
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 gunicorn>=21.2.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
 
 # HTTP and async dependencies  
 httpx>=0.25.2
-aiofiles>=23.0.0
 
 # Document processing
 PyMuPDF>=1.23.0
 python-docx>=1.0.0
-lxml>=4.9.0
 beautifulsoup4>=4.12.0
 chardet>=5.2.0
 
 # ML and AI dependencies
 sentence-transformers>=2.2.0
-faiss-cpu>=1.7.0
 google-generativeai>=0.8.5
 numpy>=1.24.0
-scikit-learn>=1.3.0
 
 # NLP dependencies
 nltk>=3.8
-
-# Data validation
-pydantic>=2.0.0
-python-multipart>=0.0.6
 
 # Caching (optional)
 redis>=5.0.0
