@@ -16,7 +16,7 @@ def main():
     """Main startup function optimized for Render"""
     
     # Get port from environment - Render automatically sets this
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8080))
     
     # Log startup info
     logger.info("=" * 50)

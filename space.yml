@@ -4,3 +4,6 @@ colorFrom: blue
 colorTo: green
 sdk: docker
 app_port: 8080
+pinned: false
+license: apache-2.0
+duplicated_from: null

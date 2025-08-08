@@ -382,7 +382,7 @@ async def process_single_question_text(question: str, request_id: str, question_
 # CRITICAL FIX: Ensure port binding for Render
 if __name__ == "__main__":
     # Get port from environment (Render sets this automatically)
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 8080))
     
     # IMPORTANT: Log the port being used
     logger.info(f"Starting server on 0.0.0.0:{port}")
