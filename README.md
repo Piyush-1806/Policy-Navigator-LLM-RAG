@@ -2,7 +2,7 @@
 
 A FastAPI-based system for processing natural language queries over insurance documents, specifically designed for the HackRx 6.0 competition.
 
-## 🎯 Competition Overview
+## Competition Overview
 
 This system implements an LLM-powered intelligent query-retrieval system that processes large documents and makes contextual decisions for insurance, legal, HR, and compliance domains.
 
@@ -15,7 +15,7 @@ This system implements an LLM-powered intelligent query-retrieval system that pr
 - Provide explainable decision rationale
 - Output structured responses
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 [Document Input] → [LLM Parser] → [Embedding Search] → [Clause Matching] → [Logic Evaluation] → [Response]
@@ -28,7 +28,7 @@ This system implements an LLM-powered intelligent query-retrieval system that pr
 4. **LLM Integration**: Google Gemini-2.0-flash-exp
 5. **Answer Generation**: Context-aware responses
 
-## 🚀 API Specification
+## API Specification
 
 ### Endpoint
 ```
@@ -64,7 +64,7 @@ Content-Type: application/json
 }
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend**: FastAPI + Uvicorn + Gunicorn
 - **LLM**: Google Gemini-2.0-flash-exp
@@ -72,7 +72,7 @@ Content-Type: application/json
 - **Document Processing**: PyMuPDF, python-docx, mailparser
 - **Embeddings**: sentence-transformers (all-mpnet-base-v2)
 
-## 🏃‍♂️ Quick Start
+## Quick Start
 
 ### Local Development
 
@@ -111,7 +111,7 @@ docker build -t hackrx-api .
 docker run -p 8000:8000 --env-file .env hackrx-api
 ```
 
-## 📊 Performance & Evaluation
+## Performance & Evaluation
 
 ### Target Metrics
 - **Response Time**: < 30 seconds
@@ -126,7 +126,7 @@ docker run -p 8000:8000 --env-file .env hackrx-api
 - **Reusability**: Code modularity and extensibility
 - **Explainability**: Clear decision reasoning and clause traceability
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 ```bash
@@ -143,7 +143,7 @@ PORT=8000                        # Server port
 - **Concurrent Requests**: Up to 10 simultaneous
 - **Cache TTL**: 1 hour for repeated requests
 
-## 🧪 Testing
+## Testing
 
 ### Health Check
 ```bash
@@ -166,7 +166,7 @@ curl -X POST "http://localhost:8000/api/v1/hackrx/run" \
   }'
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 hackrx-llm-system/
@@ -183,7 +183,7 @@ hackrx-llm-system/
 └── README.md            # This file
 ```
 
-## 🚀 Deployment Guide
+## Deployment Guide
 
 ### Quick Deployment Checklist
 - [ ] Set all required environment variables
@@ -243,7 +243,7 @@ curl https://your-hackrx-app.herokuapp.com/health
 5. Deploy
 
 
-## 🏆 Key Features
+## Key Features
 
 ### Advanced Document Processing
 - **Multi-format Support**: PDFs, DOCX, emails
@@ -291,7 +291,7 @@ curl https://your-hackrx-app.herokuapp.com/health
 3. Run test script: `python test_script.py`
 4. Check application logs for detailed error messages
 
-## 🤝 Support
+## Support
 
 For technical issues or questions:
 1. Check the health endpoint: `/health`
@@ -299,7 +299,7 @@ For technical issues or questions:
 3. Verify environment variables are set
 4. Test with the provided test script
 
-## 📝 License
+## License
 
 Built for HackRx 6.0 Competition - Educational/Competition Use
 
