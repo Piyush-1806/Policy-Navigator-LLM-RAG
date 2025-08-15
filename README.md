@@ -71,8 +71,6 @@ Content-Type: application/json
 - **Vector DB**: Pinecone (primary) / FAISS (fallback)
 - **Document Processing**: PyMuPDF, python-docx, mailparser
 - **Embeddings**: sentence-transformers (all-mpnet-base-v2)
-- **Caching**: Redis
-- **Deployment**: Docker + Heroku/Railway/Render
 
 ## 🏃‍♂️ Quick Start
 
@@ -112,21 +110,6 @@ Content-Type: application/json
 docker build -t hackrx-api .
 docker run -p 8000:8000 --env-file .env hackrx-api
 ```
-
-### Platform Deployment
-
-**Heroku:**
-```bash
-heroku create your-app-name
-heroku config:set GEMINI_API_KEY=your_key
-heroku config:set PINECONE_API_KEY=your_key
-git push heroku main
-```
-
-**Railway/Render:**
-- Connect GitHub repository
-- Set environment variables
-- Deploy automatically
 
 ## 📊 Performance & Evaluation
 
@@ -259,38 +242,6 @@ curl https://your-hackrx-app.herokuapp.com/health
 4. Set environment variables
 5. Deploy
 
-## 🎯 HackRx 6.0 Submission
-
-### Submission Format
-
-**Webhook URL:**
-```
-https://your-domain.com/api/v1/hackrx/run
-```
-
-**Tech Stack Description:**
-```
-FastAPI + Gemini-2.0-flash + Pinecone vector search + PyMuPDF + sentence-transformers embeddings
-```
-
-### Pre-Submission Checklist
-
-- [x] **API Endpoint**: `POST /api/v1/hackrx/run` implemented
-- [x] **Authentication**: Bearer token authentication working
-- [x] **HTTPS**: Deployed with SSL certificate
-- [x] **Request Format**: Accepts single `documents` string and `questions` array
-- [x] **Response Format**: Returns `{"answers": ["string1", "string2"]}` format
-- [x] **Response Time**: < 30 seconds response guarantee
-- [x] **Error Handling**: Graceful failure and meaningful error messages
-- [x] **Documentation**: Clear API specification and usage examples
-
-### Expected Evaluation Process
-
-1. **Request Sent**: Platform sends POST to your webhook
-2. **Document Processing**: Your API downloads and parses documents
-3. **Query Processing**: System processes questions using LLM
-4. **Response Returned**: API returns answers array
-5. **Evaluation**: Platform scores answer quality and performance
 
 ## 🏆 Key Features
 
@@ -312,7 +263,7 @@ FastAPI + Gemini-2.0-flash + Pinecone vector search + PyMuPDF + sentence-transfo
 - **Monitoring**: Health checks and metrics
 - **Scalability**: Concurrent request handling
 
-### Pinecone Integration (Updated)
+### Pinecone Integration
 - **Latest API**: Uses `pinecone-client>=3.0.0`
 - **Simplified Setup**: No environment parameter needed
 - **Auto Fallback**: FAISS backup if Pinecone fails
@@ -353,28 +304,5 @@ For technical issues or questions:
 Built for HackRx 6.0 Competition - Educational/Competition Use
 
 ---
-
-## 🎉 Ready to Compete!
-
-Your system is now ready for the HackRx 6.0 competition! 
-
-### Final Steps:
-1. **Deploy** to your chosen platform (Heroku/Railway/Render)
-2. **Test** the deployed URL with the test script
-3. **Submit** your webhook URL to the competition platform
-4. **Monitor** performance and iterate as needed
-
-### Submission URL Format:
-```
-https://your-app-name.herokuapp.com/api/v1/hackrx/run
-https://your-app-name.railway.app/api/v1/hackrx/run
-https://your-app-name.onrender.com/api/v1/hackrx/run
-```
-
-### Competition Tips:
-- **Test thoroughly** with different document types
-- **Monitor response times** to stay under 30 seconds
-- **Check logs** regularly for any issues
-- **Keep API keys secure** and never commit them to git
-
-Good luck! 🏆 May your LLM-powered system excel in the competition!
+ANY SUGGESTION FOR IMPROVEMENT AND WELCOME!
+contact- kunalpatra18@gmail.com
