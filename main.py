@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 # Configuration with validation
 class Config:
-    API_KEY = os.getenv("API_KEY", "538dff30fdfe2abae239378a8a7bf5848b0825874278d1e84b43420155f4e987")
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyDNU5SXXsd7sGrp_AbivHqntP0c7p9oxCQ")
+    API_KEY = os.getenv("API_KEY", "***********************")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "**********")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
     MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
     CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
